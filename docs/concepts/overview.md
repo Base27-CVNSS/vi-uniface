@@ -106,8 +106,8 @@ Low-level:
 from uniface.detection import RetinaFace
 from uniface.recognition import ArcFace
 
- detector = RetinaFace()
- recognizer = ArcFace()
+detector = RetinaFace()
+recognizer = ArcFace()
 ```
 
 High-level:
