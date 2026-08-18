@@ -1,6 +1,15 @@
-name: Deploy Documentation
+name: Deploy Vietnamese Documentation
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -10,7 +19,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -18,8 +27,10 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -29,18 +40,16 @@ jobs:
           enable-cache: true
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install documentation dependencies
         run: uv sync --locked --extra docs
 
-      - name: Build docs
-        env:
-          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.MKDOCS_GIT_COMMITTERS_APIKEY }}
+      - name: Build MkDocs site
         run: uv run mkdocs build --strict
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload site artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./site
