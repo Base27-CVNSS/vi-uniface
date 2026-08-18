@@ -1,36 +1,38 @@
-site_name: UniFace
-site_description: A Unified Face Analysis Library for Python
-site_author: Yakhyokhuja Valikhujaev
-site_url: https://yakhyo.github.io/uniface
+site_name: UniFace Việt Nam
+site_description: Thư viện Python hợp nhất cho phân tích khuôn mặt — phát hiện, nhận dạng, landmark, face mesh, tracking, parsing, gaze, thuộc tính, chất lượng và chống giả mạo.
+site_author: Yakhyokhuja Valikhujaev · Bản Việt hóa bởi Base27-CVNSS
+site_url: https://base27-cvnss.github.io/vi-uniface/
 
-repo_name: yakhyo/uniface
-repo_url: https://github.com/yakhyo/uniface
+repo_name: Base27-CVNSS/vi-uniface
+repo_url: https://github.com/Base27-CVNSS/vi-uniface
 edit_uri: edit/main/docs/
 
-copyright: Copyright &copy; 2026 Yakhyokhuja Valikhujaev
+copyright: >-
+  UniFace © Yakhyokhuja Valikhujaev · Bản Việt hóa cộng đồng bởi Base27-CVNSS · MIT License
 
 theme:
   name: material
   custom_dir: docs/overrides
+  language: vi
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
         icon: material/brightness-auto
-        name: Switch to light mode
+        name: Theo giao diện hệ thống
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
       accent: indigo
       toggle:
-        icon: material/toggle-switch
-        name: Switch to dark mode
+        icon: material/weather-night
+        name: Chuyển sang giao diện tối
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
       accent: indigo
       toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to system preference
+        icon: material/weather-sunny
+        name: Chuyển sang giao diện sáng
   font:
     text: Roboto
     code: Roboto Mono
@@ -50,15 +52,14 @@ theme:
     - content.tabs.link
     - announce.dismiss
     - toc.follow
-
   icon:
-    logo: material/book-open-page-variant
-    repo: fontawesome/brands/git-alt
+    logo: material/face-recognition
+    repo: fontawesome/brands/github
     admonition:
       note: octicons/tag-16
       abstract: octicons/checklist-16
       info: octicons/info-16
-      tip: octicons/squirrel-16
+      tip: octicons/light-bulb-16
       success: octicons/check-16
       question: octicons/question-16
       warning: octicons/alert-16
@@ -71,14 +72,14 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yakhyo
+      link: https://github.com/Base27-CVNSS/vi-uniface
+      name: Kho mã Việt hóa
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/yakhyo/uniface
+      name: Dự án UniFace gốc
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/uniface/
-    - icon: fontawesome/brands/x-twitter
-      link: https://x.com/y_valikhujaev
-  analytics:
-    provider: google
-    property: G-FGEHR2K5ZE
+      name: UniFace trên PyPI
 
 extra_css:
   - stylesheets/extra.css
@@ -119,53 +120,52 @@ markdown_extensions:
   - pymdownx.tilde
 
 plugins:
-  - search
-  - git-committers:
-      repository: yakhyo/uniface
-      branch: main
-      token: !ENV MKDOCS_GIT_COMMITTERS_APIKEY
+  - search:
+      lang: vi
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
+      locale: vi
 
 nav:
-  - Home: index.md
-  - Getting Started:
-      - Installation: installation.md
-      - Quickstart: quickstart.md
-      - Notebooks: notebooks.md
-      - Model Zoo: models.md
-      - Datasets: datasets.md
-  - Tutorials:
-      - Image Pipeline: recipes/image-pipeline.md
+  - Trang chủ: index.md
+  - Bắt đầu:
+      - Cài đặt: installation.md
+      - Khởi động nhanh: quickstart.md
+      - Notebook tương tác: notebooks.md
+      - Kho mô hình: models.md
+      - Bộ dữ liệu: datasets.md
+  - Hướng dẫn thực hành:
+      - Pipeline ảnh: recipes/image-pipeline.md
       - Video & Webcam: recipes/video-webcam.md
-      - Face Search: recipes/face-search.md
-      - Batch Processing: recipes/batch-processing.md
-      - Anonymize Stream: recipes/anonymize-stream.md
-      - Custom Models: recipes/custom-models.md
-  - API Reference:
-      - Detection: modules/detection.md
-      - Recognition: modules/recognition.md
-      - Tracking: modules/tracking.md
-      - Landmarks: modules/landmarks.md
-      - Attributes: modules/attributes.md
-      - Parsing: modules/parsing.md
-      - Matting: modules/matting.md
-      - Gaze: modules/gaze.md
-      - Head Pose: modules/headpose.md
-      - Anti-Spoofing: modules/spoofing.md
-      - Quality: modules/quality.md
-      - Privacy: modules/privacy.md
-      - Stores: modules/stores.md
-  - Guides:
-      - Overview: concepts/overview.md
-      - Inputs & Outputs: concepts/inputs-outputs.md
-      - Coordinate Systems: concepts/coordinate-systems.md
-      - Execution Providers: concepts/execution-providers.md
-      - Model Cache: concepts/model-cache-offline.md
-      - Thresholds: concepts/thresholds-calibration.md
-  - Resources:
-      - Contributing: contributing.md
-      - License: license-attribution.md
-      - Releases: https://github.com/yakhyo/uniface/releases
-      - Discussions: https://github.com/yakhyo/uniface/discussions
+      - Tìm kiếm khuôn mặt: recipes/face-search.md
+      - Xử lý hàng loạt: recipes/batch-processing.md
+      - Ẩn danh luồng video: recipes/anonymize-stream.md
+      - Mô hình tùy chỉnh: recipes/custom-models.md
+  - Tham chiếu API:
+      - Phát hiện khuôn mặt: modules/detection.md
+      - Nhận dạng khuôn mặt: modules/recognition.md
+      - Theo dõi khuôn mặt: modules/tracking.md
+      - Landmark & Face Mesh: modules/landmarks.md
+      - Thuộc tính khuôn mặt: modules/attributes.md
+      - Phân vùng khuôn mặt: modules/parsing.md
+      - Tách nền chân dung: modules/matting.md
+      - Ước lượng hướng nhìn: modules/gaze.md
+      - Tư thế đầu 3D: modules/headpose.md
+      - Chống giả mạo: modules/spoofing.md
+      - Chất lượng khuôn mặt: modules/quality.md
+      - Quyền riêng tư: modules/privacy.md
+      - Kho vector: modules/stores.md
+  - Kiến trúc & nguyên lý:
+      - Tổng quan kiến trúc: concepts/overview.md
+      - Dữ liệu vào & ra: concepts/inputs-outputs.md
+      - Hệ tọa độ: concepts/coordinate-systems.md
+      - Bộ thực thi phần cứng: concepts/execution-providers.md
+      - Bộ nhớ đệm mô hình: concepts/model-cache-offline.md
+      - Ngưỡng & hiệu chuẩn: concepts/thresholds-calibration.md
+  - Tài nguyên:
+      - Đóng góp: contributing.md
+      - Giấy phép & ghi công: license-attribution.md
+      - Nguồn gốc dự án: upstream.md
+      - Phiên bản gốc: https://github.com/yakhyo/uniface/releases
+      - Thảo luận upstream: https://github.com/yakhyo/uniface/discussions
