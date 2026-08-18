@@ -1,25 +1,40 @@
-name: Deploy Documentation
+name: Vietnamese Documentation
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deploy:
+  validate:
+    name: Validate MkDocs
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -29,18 +44,47 @@ jobs:
           enable-cache: true
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install documentation dependencies
         run: uv sync --locked --extra docs
 
-      - name: Build docs
-        env:
-          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.MKDOCS_GIT_COMMITTERS_APIKEY }}
+      - name: Build documentation strictly
+        run: uv run mkdocs build --strict
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Install documentation dependencies
+        run: uv sync --locked --extra docs
+
+      - name: Build MkDocs site
         run: uv run mkdocs build --strict
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload site artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./site

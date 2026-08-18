@@ -1,25 +1,30 @@
-# Installation
+# Cài đặt
 
-This guide covers all installation options for UniFace.
-
----
-
-## Requirements
-
-- **Python**: 3.10 – 3.14
-- **Operating Systems**: macOS, Linux, Windows
+Trang này hướng dẫn cài UniFace trên **Windows, Linux, macOS, CPU, Apple Silicon và NVIDIA CUDA**.
 
 ---
 
-## Why Two Extras?
+## Yêu cầu
 
-`onnxruntime` (CPU) and `onnxruntime-gpu` (CUDA) both own the same Python namespace.
-Installing both at the same time causes file conflicts and silent provider mismatches.
-UniFace exposes them as separate, mutually exclusive extras so you install exactly one.
+- **Python:** 3.10 – 3.14
+- **Hệ điều hành:** Windows, Linux, macOS
+- **RAM:** phụ thuộc số mô hình được nạp đồng thời
+- **GPU:** không bắt buộc; NVIDIA CUDA chỉ cần khi muốn tăng tốc GPU
 
 ---
 
-## Quick Install
+## Vì sao có hai gói `cpu` và `gpu`?
+
+UniFace tách runtime thành hai extra:
+
+- `uniface[cpu]` → cài `onnxruntime`
+- `uniface[gpu]` → cài `onnxruntime-gpu`
+
+Hai package ONNX Runtime này dùng cùng namespace Python. Nếu cài đồng thời, môi trường có thể bị xung đột file hoặc chọn sai execution provider. Vì vậy hãy chọn **một** biến thể phù hợp với máy của bạn.
+
+---
+
+## Cài nhanh
 
 === "CPU / Apple Silicon"
 
@@ -33,273 +38,261 @@ UniFace exposes them as separate, mutually exclusive extras so you install exact
     pip install "uniface[gpu]"
     ```
 
----
+=== "Bản pre-release"
 
-## Platform-Specific Installation
-
-### macOS (Apple Silicon - M1/M2/M3/M4)
-
-The `[cpu]` extra pulls in the standard `onnxruntime` package, which has native ARM64 support
-built in since version 1.13. No additional setup is needed for CoreML acceleration.
-
-```bash
-pip install "uniface[cpu]"
-```
-
-!!! tip "Native Performance"
-    `onnxruntime` 1.13+ includes ARM64 optimizations out of the box.
-    UniFace automatically detects and enables `CoreMLExecutionProvider` on Apple Silicon.
-
-Verify ARM64 installation:
-
-```bash
-python -c "import platform; print(platform.machine())"
-# Should show: arm64
-```
+    ```bash
+    pip install --pre "uniface[cpu]"
+    ```
 
 ---
 
-### Linux/Windows with NVIDIA GPU
+## Windows / Linux + NVIDIA GPU
 
 ```bash
 pip install "uniface[gpu]"
 ```
 
-This installs `onnxruntime-gpu`, which includes both `CUDAExecutionProvider` and
-`CPUExecutionProvider` — no separate CPU package is needed.
+Gói này cài `onnxruntime-gpu`, trong đó đã có cả `CUDAExecutionProvider` và `CPUExecutionProvider`.
 
-**Requirements:**
-
-- NVIDIA driver compatible with your CUDA version
-- CUDA 11.x or 12.x toolkit
-- cuDNN 8.x
-
-!!! info "CUDA Compatibility"
-    See the [ONNX Runtime GPU compatibility matrix](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html)
-    for matching CUDA and cuDNN versions.
-
-Verify GPU installation:
+Kiểm tra provider:
 
 ```python
 import onnxruntime as ort
-print("Available providers:", ort.get_available_providers())
-# Should include: 'CUDAExecutionProvider'
+print(ort.get_available_providers())
 ```
+
+Kết quả nên có:
+
+```text
+CUDAExecutionProvider
+CPUExecutionProvider
+```
+
+!!! warning "Nếu không thấy CUDA"
+    Kiểm tra driver bằng `nvidia-smi`, sau đó đối chiếu phiên bản CUDA/cuDNN với phiên bản ONNX Runtime đang dùng. Không nên đoán rằng cứ cài CUDA Toolkit là UniFace sẽ tự dùng GPU.
 
 ---
 
-### CPU-Only (All Platforms)
+## macOS Apple Silicon
+
+Dùng biến thể CPU:
 
 ```bash
 pip install "uniface[cpu]"
 ```
 
-Works on all platforms with automatic CPU fallback.
+Kiểm tra kiến trúc Python:
+
+```bash
+python -c "import platform; print(platform.machine())"
+```
+
+Máy Apple Silicon nên trả về:
+
+```text
+arm64
+```
+
+Nếu trả về `x86_64`, có thể Python đang chạy qua Rosetta và không tận dụng đúng kiến trúc ARM64.
 
 ---
 
-## Install from Source
-
-For development or the latest features:
+## CPU thuần
 
 ```bash
-git clone https://github.com/yakhyo/uniface.git
-cd uniface
-
-pip install -e ".[cpu]"   # CPU / Apple Silicon
-pip install -e ".[gpu]"   # NVIDIA GPU
+pip install "uniface[cpu]"
 ```
 
-With development dependencies:
+Đây là lựa chọn ổn định nhất nếu bạn không cần CUDA hoặc muốn triển khai trên máy chủ/PC phổ thông.
+
+---
+
+## Cài từ mã nguồn Việt hóa
+
+```bash
+git clone https://github.com/Base27-CVNSS/vi-uniface.git
+cd vi-uniface
+pip install -e ".[cpu]"
+```
+
+Nếu dùng NVIDIA CUDA:
+
+```bash
+pip install -e ".[gpu]"
+```
+
+Cho môi trường phát triển:
 
 ```bash
 pip install -e ".[cpu,dev]"
 ```
 
+!!! info "Upstream"
+    Fork Việt hóa giữ tương thích với dự án gốc [`yakhyo/uniface`](https://github.com/yakhyo/uniface). Khi cần đối chiếu thay đổi mới nhất, hãy kiểm tra upstream trước khi đồng bộ.
+
 ---
 
-## FAISS Vector Store
+## FAISS cho tìm kiếm khuôn mặt
 
-For fast multi-identity face search using a FAISS vector store:
+Nếu cần lưu và truy vấn embedding trên tập lớn:
 
 ```bash
-pip install faiss-cpu   # CPU
-pip install faiss-gpu   # NVIDIA GPU (CUDA)
+pip install faiss-cpu
 ```
 
-See the [Stores module](modules/stores.md) for usage.
+Hoặc bản GPU nếu môi trường FAISS/CUDA của bạn hỗ trợ:
+
+```bash
+pip install faiss-gpu
+```
+
+FAISS không bắt buộc cho detection/recognition cơ bản; nó chỉ cần cho lớp **vector store/search**.
 
 ---
 
-## Dependencies
+## Các dependency chính
 
-UniFace has minimal core dependencies:
+| Package | Vai trò |
+|---|---|
+| `numpy` | Mảng số và tensor đầu vào/đầu ra |
+| `opencv-python` | Đọc ảnh, video, xử lý ảnh |
+| `scikit-image` | Biến đổi hình học và căn chỉnh |
+| `scipy` | Tính toán khoa học hỗ trợ |
+| `requests` | Tải trọng số mô hình |
+| `tqdm` | Hiển thị tiến trình |
+| `onnxruntime` | Suy luận CPU / Apple Silicon |
+| `onnxruntime-gpu` | Suy luận NVIDIA CUDA |
 
-| Package | Purpose |
-|---------|---------|
-| `numpy` | Array operations |
-| `opencv-python` | Image processing |
-| `scikit-image` | Geometric transforms |
-| `scipy` | Signal processing |
-| `requests` | Model download |
-| `tqdm` | Progress bars |
-
-**Runtime extras (install exactly one):**
-
-| Extra | Package | Use case |
-|-------|---------|---------|
-| `uniface[cpu]` | `onnxruntime` | CPU inference, Apple Silicon |
-| `uniface[gpu]` | `onnxruntime-gpu` | NVIDIA CUDA inference |
-
-**Other optional packages:**
-
-| Package | Install | Purpose |
-|---------|---------|---------|
-| `faiss-cpu` / `faiss-gpu` | `pip install faiss-cpu` | FAISS vector store |
-| `torch` | `pip install torch` | Emotion model (TorchScript) |
-| `torchvision` | `pip install torchvision` | Faster NMS for YOLO detectors |
+Một số mô hình tùy chọn có thể cần `torch` hoặc `torchvision`.
 
 ---
 
-## Verify Installation
+## Vòng đời trọng số mô hình
 
-Test your installation:
+Khi bạn khởi tạo một model lần đầu:
+
+1. UniFace kiểm tra cache cục bộ.
+2. Nếu chưa có, model được tải về.
+3. File được xác minh bằng checksum SHA-256.
+4. Model được nạp vào execution provider phù hợp.
+5. Các lần sau dùng lại file trong cache.
+
+Vị trí mặc định:
+
+```text
+~/.uniface/models
+```
+
+Có thể đổi bằng Python:
+
+```python
+from uniface.model_store import set_cache_dir
+set_cache_dir("D:/AI/uniface-models")
+```
+
+Hoặc biến môi trường:
+
+```bash
+set UNIFACE_CACHE_DIR=D:\AI\uniface-models
+```
+
+Trên Linux/macOS:
+
+```bash
+export UNIFACE_CACHE_DIR=/data/uniface-models
+```
+
+---
+
+## Kiểm tra sau cài đặt
 
 ```python
 import uniface
-print(f"UniFace version: {uniface.__version__}")
-
-# Check available ONNX providers
 import onnxruntime as ort
-print(f"Available providers: {ort.get_available_providers()}")
-
-# Quick test
 from uniface.detection import RetinaFace
+
+print("UniFace:", uniface.__version__)
+print("Providers:", ort.get_available_providers())
+
 detector = RetinaFace()
-print("Installation successful!")
+print("Khởi tạo detector thành công")
 ```
 
 ---
 
-## Upgrading
+## Chuyển từ CPU sang GPU
 
-When upgrading UniFace, stay consistent with your runtime extra:
-
-```bash
-pip install --upgrade "uniface[cpu]"   # or uniface[gpu]
-```
-
-If you are switching from CPU to GPU (or vice versa):
+Không cài chồng hai runtime. Hãy gỡ sạch trước:
 
 ```bash
 pip uninstall onnxruntime onnxruntime-gpu -y
-pip install "uniface[gpu]"   # install the one you want
+pip install "uniface[gpu]"
 ```
 
----
-
-## Pre-release Versions
-
-UniFace ships release candidates and betas to PyPI ahead of stable releases (versions like `4.0.0rc1`, `4.0.0b1`, `4.0.0a1`). These let you try upcoming features before they're finalized.
-
-`pip install uniface` always installs the latest **stable** release. To opt in to pre-releases:
-
-```bash
-# Latest pre-release (if newer than latest stable)
-pip install "uniface[cpu]" --pre
-
-# A specific pre-release
-pip install "uniface[cpu]==4.0.0rc1"
-```
-
-Pre-releases are not recommended for production — APIs may still change before the stable release.
-
----
-
-## Troubleshooting
-
-### onnxruntime Not Found
-
-If you see:
-
-```
-ImportError: onnxruntime is not installed. Install it with one of:
-  pip install "uniface[cpu]"   # CPU / Apple Silicon
-  pip install "uniface[gpu]"   # NVIDIA GPU (CUDA)
-```
-
-You installed uniface without an extra. Run the appropriate command above.
-
----
-
-### Both onnxruntime and onnxruntime-gpu Installed
-
-If you previously ran `pip install "uniface[gpu]"` on top of a `pip install "uniface[cpu]"`
-(or vice versa), you may have both packages installed simultaneously, which causes conflicts.
-Fix it with:
+Chuyển ngược về CPU:
 
 ```bash
 pip uninstall onnxruntime onnxruntime-gpu -y
-pip install "uniface[gpu]"   # or uniface[cpu]
+pip install "uniface[cpu]"
 ```
 
 ---
 
-### Import Errors
+## Lỗi thường gặp
 
-Ensure you're using Python 3.10+:
+### `onnxruntime is not installed`
+
+Bạn có thể đã cài `uniface` mà không chọn extra. Cài lại:
 
 ```bash
-python --version
-# Should show: Python 3.10.x or higher
+pip install "uniface[cpu]"
 ```
 
----
+hoặc:
 
-### Model Download Issues
+```bash
+pip install "uniface[gpu]"
+```
 
-Models are automatically downloaded on first use. If downloads fail:
+### Đã cài cả `onnxruntime` và `onnxruntime-gpu`
+
+```bash
+pip uninstall onnxruntime onnxruntime-gpu -y
+pip install "uniface[cpu]"   # hoặc [gpu], chỉ chọn một
+```
+
+### Model tải thất bại
+
+Kiểm tra mạng, quyền ghi thư mục cache và dung lượng đĩa. Có thể kiểm tra/tải model qua model store:
 
 ```python
-from uniface.model_store import verify_model_weights
 from uniface.constants import RetinaFaceWeights
+from uniface.model_store import verify_model_weights
 
-# Manually download a model
-model_path = verify_model_weights(RetinaFaceWeights.MNET_V2)
-print(f"Model downloaded to: {model_path}")
+path = verify_model_weights(RetinaFaceWeights.MNET_V2)
+print(path)
 ```
 
----
-
-### CUDA Not Detected
-
-1. Verify CUDA installation:
-   ```bash
-   nvidia-smi
-   ```
-
-2. Check CUDA version compatibility with ONNX Runtime.
-
-3. Reinstall the GPU extra cleanly:
-   ```bash
-   pip uninstall onnxruntime onnxruntime-gpu -y
-   pip install "uniface[gpu]"
-   ```
-
----
-
-### Performance Issues on Mac
-
-Verify you're using the ARM64 build (not x86_64 via Rosetta):
+### CUDA không được nhận
 
 ```bash
-python -c "import platform; print(platform.machine())"
-# Should show: arm64 (not x86_64)
+nvidia-smi
 ```
+
+Sau đó kiểm tra:
+
+```python
+import onnxruntime as ort
+print(ort.get_available_providers())
+```
+
+Nếu chỉ có `CPUExecutionProvider`, pipeline đang chạy CPU dù máy có GPU.
 
 ---
 
-## Next Steps
+## Bước tiếp theo
 
-- [Quickstart Guide](quickstart.md) - Get started in 5 minutes
-- [Execution Providers](concepts/execution-providers.md) - Hardware acceleration setup
+- [Khởi động nhanh](quickstart.md) — chạy pipeline đầu tiên.
+- [Tổng quan kiến trúc](concepts/overview.md) — hiểu cách các module phối hợp.
+- [Execution Providers](concepts/execution-providers.md) — đi sâu vào tăng tốc phần cứng.
+- [Kho mô hình](models.md) — chọn model theo độ chính xác/tài nguyên.

@@ -1,185 +1,174 @@
-<h1 align="center">UniFace: A Unified Face Analysis Library for Python</h1>
+<h1 align="center">🇻🇳 UniFace Việt Nam</h1>
+
+<p align="center"><b>Thư viện Python hợp nhất cho phân tích khuôn mặt</b><br>Phát hiện · Nhận dạng · Tracking · Landmark · Face Mesh · Parsing · Matting · Gaze · Head Pose · Thuộc tính · Chất lượng · Anti-Spoofing · Ẩn danh · Vector Search</p>
 
 <div align="center">
 
-[![PyPI Version](https://img.shields.io/pypi/v/uniface.svg?label=Version)](https://pypi.org/project/uniface/)
-[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Github Build Status](https://github.com/yakhyo/uniface/actions/workflows/ci.yml/badge.svg)](https://github.com/yakhyo/uniface/actions)
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/uniface?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Downloads)](https://pepy.tech/projects/uniface)
-[![Kaggle Badge](https://img.shields.io/badge/Notebooks-Kaggle?label=Kaggle&color=blue)](https://www.kaggle.com/yakhyokhuja/code)
+[![PyPI](https://img.shields.io/pypi/v/uniface.svg?label=PyPI)](https://pypi.org/project/uniface/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Upstream](https://img.shields.io/badge/Upstream-yakhyo%2Funiface-181717?logo=github)](https://github.com/yakhyo/uniface)
+[![Docs](https://img.shields.io/badge/Tài_liệu-Tiếng_Việt-0A66C2)](https://base27-cvnss.github.io/vi-uniface/)
 
 </div>
 
 <div align="center">
-    <img src="https://raw.githubusercontent.com/yakhyo/uniface/main/.github/logos/uniface_rounded_q80.webp" width="90%" alt="UniFace - A Unified Face Analysis Library for Python">
+  <img src="https://raw.githubusercontent.com/yakhyo/uniface/main/.github/logos/uniface_rounded_q80.webp" width="88%" alt="UniFace - thư viện phân tích khuôn mặt hợp nhất cho Python">
 </div>
 
-<p align="center">
-  UniFace is a lightweight, production-ready Python library for face detection, recognition,<br>
-  tracking, landmark analysis, face parsing, gaze estimation, and face attributes.
-</p>
+> **`vi-uniface` là bản Việt hóa và biên soạn tài liệu của UniFace.** Lõi kỹ thuật, API Python và cơ chế mô hình được giữ tương thích với dự án gốc [`yakhyo/uniface`](https://github.com/yakhyo/uniface). Bản này tập trung giải thích rõ bản chất, kiến trúc, pipeline, cách dùng và lưu ý triển khai cho người dùng Việt Nam.
 
-<p align="center">
-  <a href="https://yakhyo.github.io/uniface/quickstart/"><img src="https://img.shields.io/badge/Get%20Started-1f6feb?style=for-the-badge&logoColor=white" alt="Get Started"></a>
-  &nbsp;
-  <a href="https://yakhyo.github.io/uniface/models/"><img src="https://img.shields.io/badge/Model%20Zoo-30363d?style=for-the-badge&logoColor=white" alt="Model Zoo"></a>
-  &nbsp;
-  <a href="https://yakhyo.github.io/uniface/notebooks/"><img src="https://img.shields.io/badge/Notebooks-30363d?style=for-the-badge&logo=jupyter&logoColor=white" alt="Notebooks"></a>
-  &nbsp;
-  <a href="https://yakhyo.github.io/uniface/"><img src="https://img.shields.io/badge/Full%20Docs-30363d?style=for-the-badge&logoColor=white" alt="Full Docs"></a>
-</p>
+## 🚀 Cài nhanh
 
 ```bash
-pip install "uniface[cpu]"          # CPU and Apple Silicon
+pip install "uniface[cpu]"          # CPU / Apple Silicon
 pip install "uniface[gpu]"          # NVIDIA CUDA
-pip install --pre "uniface[cpu]"    # latest pre-release
 ```
 
-<details>
-<summary><b>A first script</b></summary>
+Cài trực tiếp từ fork Việt hóa để đọc tài liệu và phát triển:
 
-<br>
+```bash
+git clone https://github.com/Base27-CVNSS/vi-uniface.git
+cd vi-uniface
+pip install -e ".[cpu]"             # hoặc .[gpu]
+```
 
-`FaceAnalyzer` runs detection, alignment and recognition in one call. Attribute models are opt-in.
+> ⚠️ Không nên cài đồng thời `onnxruntime` và `onnxruntime-gpu`, vì chúng dùng chung namespace Python. Hãy chọn đúng một runtime.
+
+## 🧠 UniFace thực chất là gì?
+
+UniFace **không phải một mô hình AI duy nhất**. Đây là một lớp thư viện hợp nhất nhiều mô hình chuyên biệt dưới cùng quy ước dữ liệu và API. Một pipeline điển hình có dạng:
+
+```text
+Ảnh / Video
+    ↓
+Phát hiện khuôn mặt
+    ↓
+Căn chỉnh ──────────────┐
+    ↓                    │
+Embedding / Recognition │
+    ↓                    │
+FAISS / So khớp         │
+                         ├─ Landmark / Face Mesh
+                         ├─ Thuộc tính
+                         ├─ Gaze / Head Pose
+                         ├─ Parsing / Matting
+                         ├─ Quality / Anti-Spoofing
+                         └─ BYTETracker / Privacy
+```
+
+Các mô hình chủ yếu chạy qua **ONNX Runtime**, cho phép cùng một codebase hoạt động trên Windows, Linux, macOS, CPU, Apple Silicon và NVIDIA CUDA.
+
+## 🧩 15 nhóm tác vụ chính
+
+| Tác vụ | Mô hình / thành phần | Công dụng |
+|---|---|---|
+| 👤 Phát hiện khuôn mặt | RetinaFace, SCRFD, CenterFace, YOLOv5/8-Face, BlazeFace | Tìm vị trí khuôn mặt và landmark cơ bản |
+| 🪪 Nhận dạng khuôn mặt | AdaFace, ArcFace, EdgeFace, MobileFace, SphereFace | Tạo embedding để xác minh / tìm kiếm |
+| 🎯 Theo dõi | BYTETracker | Duy trì ID khuôn mặt qua video |
+| 📍 Landmark | 2d106det, PIPNet | 68 / 98 / 106 điểm đặc trưng |
+| 🕸️ Face Mesh | MediaPipe Face Mesh | 468 / 478 điểm 3D, có biến thể iris |
+| 🧬 Thuộc tính | AgeGender, FairFace, AffectNet, FaceAttribNet | Tuổi, nhóm tuổi, cảm xúc, trạng thái khuôn mặt |
+| 🧩 Face Parsing | BiSeNet, XSeg | Phân vùng các thành phần trên khuôn mặt |
+| 🖼️ Portrait Matting | MODNet | Tách nền và alpha matte |
+| 👁️ Gaze | MobileGaze | Ước lượng hướng nhìn |
+| 🧭 Head Pose | 6D rotation | Pitch / yaw / roll của đầu |
+| 🛡️ Anti-Spoofing | MiniFASNet | Ước lượng liveness |
+| ⭐ Face Quality | eDifFIQA | Chấm điểm chất lượng trước nhận dạng |
+| 🫥 Ẩn danh | BlurFace | Che / làm mờ khuôn mặt |
+| 🔎 Vector Search | FAISS | Tìm embedding gần nhất |
+| 🧠 Pipeline hợp nhất | `FaceAnalyzer` | Ghép detection + recognition + predictor |
+
+## ⚡ Ví dụ đầu tiên
 
 ```python
 import cv2
+from uniface import FaceAnalyzer
+
+analyzer = FaceAnalyzer()
+image = cv2.imread("photo.jpg")
+faces = analyzer.analyze(image)
+
+for face in faces:
+    print("bbox:", face.bbox)
+    print("confidence:", face.confidence)
+    print("embedding:", face.embedding.shape if face.embedding is not None else None)
+```
+
+`FaceAnalyzer()` mặc định chạy pipeline cơ bản. Các mô hình thuộc tính là **opt-in**; chỉ chạy khi bạn truyền predictor tương ứng:
+
+```python
 from uniface import FaceAnalyzer, FairFace
 
 analyzer = FaceAnalyzer(predictors=[FairFace()])
+faces = analyzer.analyze(image)
 
-for face in analyzer.analyze(cv2.imread("photo.jpg")):
-    print(face.bbox, face.sex, face.age_group, face.embedding.shape)
+for face in faces:
+    print(face.sex, face.age_group, face.race)
 ```
 
-`bbox`, `confidence`, `landmarks` and `embedding` are always set. Age, sex, race, emotion, quality
-and the face states stay `None` until you pass the predictor that fills them.
+## 🖼️ Ví dụ trực quan
 
-</details>
+**Phát hiện khuôn mặt**
 
-<details>
-<summary><b>All fifteen tasks, and which model does each</b></summary>
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/detection.jpg" width="100%" alt="Face detection demo">
 
-<br>
+**Face Mesh**
 
-| Task | Models |
-| --- | --- |
-| Face Detection | RetinaFace, SCRFD, CenterFace, YOLOv5-Face, YOLOv8-Face, BlazeFace |
-| Face Recognition | AdaFace, ArcFace, EdgeFace, MobileFace, SphereFace |
-| Face Tracking | BYTETracker, persistent IDs across video frames |
-| Facial Landmarks | 2d106det (106), PIPNet (98 / 68), Face Mesh (468 / 478, 3D) |
-| Face Parsing | BiSeNet (19 classes), XSeg masking |
-| Portrait Matting | MODNet, trimap-free |
-| Gaze Estimation | MobileGaze (ResNet-18 / 34 / 50, MobileNetV2) |
-| Head Pose | 6D rotation representation, pitch / yaw / roll |
-| Demographics | AgeGender, FairFace (age group, sex, race) |
-| Emotion | AffectNet-7 and AffectNet-8 |
-| Face States | FaceAttribNet: eyes, glasses, sunglasses, mask |
-| Face Quality | eDifFIQA (T / S / M / L) |
-| Anti-Spoofing | MiniFASNet liveness |
-| Anonymization | 5 blur methods |
-| Vector Store | FAISS-backed embedding search |
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/face_mesh.jpg" width="100%" alt="Face mesh demo">
 
-Runs on CPU, Apple Silicon and CUDA. Weights download on first use, verified by SHA-256.
+**Head Pose**
 
-</details>
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/headpose.jpg" width="100%" alt="Head pose demo">
 
-<br>
+**Gaze Estimation**
 
-### Find and measure faces
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/gaze.jpg" width="100%" alt="Gaze estimation demo">
 
-**Face Detection** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/detection/)
+**Face Parsing**
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/detection.jpg" width="100%">
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/parsing.jpg" width="100%" alt="Face parsing demo">
 
-**Facial Landmarks** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/landmarks/)
+**Anti-Spoofing**
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/landmarks.jpg" width="100%">
+<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/spoofing.jpg" width="100%" alt="Anti-spoofing demo">
 
-**Face Mesh** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/landmarks/#face-mesh-468-or-478-points-3d)
+## 🏗️ Triết lý kiến trúc
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/face_mesh.jpg" width="100%">
+- **Module hóa:** mỗi tác vụ là một thành phần chuyên biệt, có thể dùng độc lập.
+- **API thống nhất:** detector, recognizer, predictor và `Face` object dùng quy ước chung.
+- **Model-on-demand:** trọng số tải khi dùng lần đầu và lưu vào cache.
+- **Xác minh trọng số:** model được kiểm tra checksum SHA-256 trước khi dùng.
+- **Đa nền tảng:** tối ưu provider phần cứng thông qua ONNX Runtime.
+- **Từ thấp đến cao:** có thể dùng class trực tiếp hoặc ghép pipeline bằng `FaceAnalyzer`.
 
-**Face Quality** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/quality/)
+## 📚 Tài liệu tiếng Việt
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/quality.jpg" width="100%">
+Tài liệu MkDocs được tổ chức theo cùng tư duy chuyên nghiệp của upstream:
 
-### Cut faces out
+- **Bắt đầu:** cài đặt, quickstart, notebook, model zoo, dataset.
+- **Hướng dẫn thực hành:** ảnh, video/webcam, face search, batch, anonymization.
+- **Tham chiếu API:** detection, recognition, tracking, landmarks, attributes, parsing, gaze, head pose, spoofing, quality, privacy, stores.
+- **Kiến trúc & nguyên lý:** input/output, hệ tọa độ, provider phần cứng, model cache, threshold và calibration.
 
-**Face Parsing** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/parsing/)
+👉 **Website:** https://base27-cvnss.github.io/vi-uniface/
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/parsing.jpg" width="100%">
+## ⚖️ Giấy phép và ghi công
 
-**Face Segmentation** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/parsing/#xseg)
+- **UniFace core:** MIT License.
+- **Tác giả dự án gốc:** Yakhyokhuja Valikhujaev — [`yakhyo/uniface`](https://github.com/yakhyo/uniface).
+- **Bản Việt hóa:** cộng đồng Base27-CVNSS.
+- Một số **pretrained weights** có giấy phép khác với MIT. Hãy kiểm tra `docs/license-attribution.md` trước khi phân phối hoặc dùng thương mại.
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/segmentation.jpg" width="100%">
+## 🔐 Sử dụng có trách nhiệm
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/segmentation_occluded.jpg" width="100%">
+Công nghệ phân tích khuôn mặt có thể liên quan đến quyền riêng tư, thiên lệch mô hình và quyết định nhạy cảm. Không nên xem các dự đoán tuổi, giới tính, nhóm nhân khẩu học, cảm xúc hay liveness là sự thật tuyệt đối. Với hệ thống định danh, kiểm soát truy cập, y tế hoặc quyết định có ảnh hưởng lớn, cần kiểm định dữ liệu, hiệu chuẩn ngưỡng, đo FAR/FRR và duy trì cơ chế giám sát của con người.
 
-**Portrait Matting** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/matting/)
+---
 
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/matting.jpg" width="100%">
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/matting_alt.jpg" width="100%">
-
-### Read where a head is pointing
-
-**Head Pose** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/headpose/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/headpose.jpg" width="100%">
-
-**Gaze Estimation** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/gaze/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/gaze.jpg" width="100%">
-
-### Read a face
-
-**Age and Sex** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/attributes/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/demography.jpg" width="100%">
-
-**Emotion** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/attributes/#emotion)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/emotion.jpg" width="100%">
-
-**Face States** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/attributes/#faceattribnet)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/face_states.jpg" width="100%">
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/face_states_alt.jpg" width="100%">
-
-### Tell a real face from a replay
-
-**Anti-Spoofing** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/spoofing/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/spoofing.jpg" width="100%">
-
-### Match a face, or hide one
-
-**Face Recognition** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/recognition/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/verification.jpg" width="100%">
-
-**Face Anonymization** &nbsp;·&nbsp; [docs](https://yakhyo.github.io/uniface/modules/privacy/)
-
-<img src="https://raw.githubusercontent.com/yakhyo/uniface/main/assets/demo/anonymization.jpg" width="100%">
-
-<br>
-
-<div align="center">
-
-**[Get Started](https://yakhyo.github.io/uniface/quickstart/)** &nbsp;·&nbsp;
-[Model Zoo](https://yakhyo.github.io/uniface/models/) &nbsp;·&nbsp;
-[Notebooks](https://yakhyo.github.io/uniface/notebooks/) &nbsp;·&nbsp;
-[Model licences](https://yakhyo.github.io/uniface/license-attribution/) &nbsp;·&nbsp;
-[Contributing](CONTRIBUTING.md) &nbsp;·&nbsp;
-[Discord](https://discord.gg/wdzrjr7R5j) &nbsp;·&nbsp;
-[Issues](https://github.com/yakhyo/uniface/issues)
-
-Runs on CPU, Apple Silicon and CUDA. Weights download on first use, verified by SHA-256.<br>
-UniFace is [MIT](LICENSE); some pretrained weights are not, so check
-[licences](https://yakhyo.github.io/uniface/license-attribution/) before shipping commercially.<br>
-Not affiliated with [Uniface](https://uniface.com/) by Rocket Software.
-
-</div>
+<p align="center">
+  <a href="https://base27-cvnss.github.io/vi-uniface/"><b>📘 Tài liệu Việt hóa</b></a> ·
+  <a href="https://github.com/yakhyo/uniface"><b>🌐 Dự án gốc</b></a> ·
+  <a href="https://pypi.org/project/uniface/"><b>🐍 PyPI</b></a> ·
+  <a href="https://github.com/Base27-CVNSS/vi-uniface"><b>💻 Fork Việt hóa</b></a>
+</p>
