@@ -1,148 +1,155 @@
-# Overview
+# Tổng quan kiến trúc
 
-UniFace is designed as a modular, production-ready face analysis library. This page explains the architecture and design principles.
+UniFace được thiết kế như một **thư viện phân tích khuôn mặt dạng module, sẵn sàng cho triển khai**, trong đó mỗi nhóm tác vụ được xử lý bởi một thành phần chuyên biệt nhưng chia sẻ cùng quy ước dữ liệu.
 
 ---
 
-## Architecture
-
-UniFace follows a modular architecture where each face analysis task is handled by a dedicated module:
+## Kiến trúc tổng thể
 
 ```mermaid
 graph TB
-    subgraph Input
-        IMG[Image/Frame]
-    end
+    A[Ảnh / Khung hình] --> B[Detection]
+    A --> M[Portrait Matting]
 
-    subgraph Detection
-        DET[RetinaFace / SCRFD / YOLOv5Face / YOLOv8Face]
-    end
+    B --> C[Alignment]
+    B --> D[Landmarks / Face Mesh]
+    B --> E[Attributes]
+    B --> F[Gaze]
+    B --> G[Head Pose]
+    B --> H[Parsing]
+    B --> I[Anti-Spoofing]
+    B --> J[Quality]
+    B --> K[Privacy]
+    B --> T[BYTETracker]
 
-    subgraph Analysis
-        REC[Recognition]
-        LMK[Landmarks]
-        ATTR[Attributes]
-        GAZE[Gaze]
-        HPOSE[Head Pose]
-        PARSE[Parsing]
-        SPOOF[Anti-Spoofing]
-        QUAL[Quality]
-        MATT[Matting]
-        PRIV[Privacy]
-    end
+    C --> R[Recognition / Embedding]
+    R --> V[FAISS Vector Store]
 
-    subgraph Tracking
-        TRK[BYTETracker]
-    end
+    D --> O[Face Object / Kết quả]
+    E --> O
+    F --> O
+    G --> O
+    H --> O
+    I --> O
+    J --> O
+    T --> O
+    R --> O
+```
 
-    subgraph Stores
-        IDX[FAISS Vector Store]
-    end
+### Ý nghĩa của kiến trúc này
 
-    subgraph Output
-        FACE[Face Objects]
-    end
+UniFace không ép mọi bài toán qua một model duy nhất. Thay vào đó:
 
-    IMG --> DET
-    IMG --> MATT
-    DET --> REC
-    DET --> LMK
-    DET --> ATTR
-    DET --> GAZE
-    DET --> HPOSE
-    DET --> PARSE
-    DET --> SPOOF
-    DET --> QUAL
-    DET --> PRIV
-    DET --> TRK
-    REC --> IDX
-    REC --> FACE
-    LMK --> FACE
-    ATTR --> FACE
-    TRK --> FACE
+- **Detection** trả về vị trí khuôn mặt và landmark cơ bản.
+- **Alignment** chuẩn hóa pose/crop trước bước nhận dạng.
+- **Recognition** biến khuôn mặt thành vector embedding.
+- **Landmark / Face Mesh** mô tả hình học chi tiết.
+- **Predictor** bổ sung thuộc tính, gaze, head pose, quality hoặc liveness.
+- **Tracking** nối các detection theo thời gian.
+- **Vector Store** lưu embedding và tìm hàng xóm gần nhất.
+
+Nhờ vậy, bạn chỉ nạp đúng thành phần cần thiết thay vì phải chạy toàn bộ hệ thống.
+
+---
+
+## Bốn nguyên lý thiết kế chính
+
+### 1. Một API, nhiều mô hình
+
+Các detector/recognizer/predictor khác nhau được bọc dưới các class có quy ước tương tự. Điều này làm giảm phần “keo” khi thay model.
+
+```python
+from uniface.detection import RetinaFace, SCRFD
+
+retina = RetinaFace()
+scrfd = SCRFD()
+```
+
+Việc đổi detector không bắt buộc phải viết lại toàn bộ pipeline phía sau.
+
+### 2. Model chỉ tải khi cần
+
+Trọng số không phải lúc nào cũng đóng gói cùng thư viện. UniFace tải model ở lần dùng đầu, xác minh checksum rồi cache cục bộ.
+
+```text
+Khởi tạo model
+   ↓
+Kiểm tra cache
+   ↓
+Có? ── Có ──→ Nạp model
+ │
+ Không
+ ↓
+Tải trọng số → SHA-256 → Cache → Nạp model
+```
+
+Cách này giữ package Python gọn hơn nhưng đồng nghĩa môi trường production nên chủ động **pre-cache model** nếu máy không có Internet.
+
+### 3. Tách runtime CPU và GPU
+
+UniFace dùng ONNX Runtime làm backend chính. Hai extra:
+
+```bash
+pip install "uniface[cpu]"
+pip install "uniface[gpu]"
+```
+
+được tách riêng để tránh xung đột giữa `onnxruntime` và `onnxruntime-gpu`.
+
+### 4. Từ low-level đến high-level
+
+Bạn có thể dùng trực tiếp từng module hoặc dùng `FaceAnalyzer` để ghép pipeline phổ biến.
+
+Low-level:
+
+```python
+from uniface.detection import RetinaFace
+from uniface.recognition import ArcFace
+
+ detector = RetinaFace()
+ recognizer = ArcFace()
+```
+
+High-level:
+
+```python
+from uniface import FaceAnalyzer
+
+analyzer = FaceAnalyzer()
+faces = analyzer.analyze(image)
 ```
 
 ---
 
-## Design Principles
+## Cấu trúc module
 
-### 1. Cross-Platform Inference
-
-UniFace gives you consistent, hardware-accelerated face analysis across macOS, Linux, and Windows from a single API. The optimal hardware backend is selected automatically; models run on ONNX Runtime, with PyTorch for a few optional ones.
-
-- **Cross-platform**: Same models work on macOS, Linux, Windows
-- **Hardware acceleration**: Automatic selection of optimal provider
-- **Production-ready**: No Python-only dependencies for inference
-
-### 2. Minimal Dependencies
-
-Core dependencies are kept minimal:
-
-```
-numpy         # Array operations
-opencv-python # Image processing
-scikit-image  # Geometric transforms (face alignment)
-scipy         # Scientific computing
-requests      # Model download
-tqdm          # Progress bars
-```
-
-ONNX Runtime is installed separately via the `uniface[cpu]` or `uniface[gpu]` extra (see [Installation](../installation.md)).
-
-### 3. Simple API
-
-Direct class instantiation:
-
-```python
-from uniface.detection import CenterFace, RetinaFace, SCRFD
-
-detector = RetinaFace()
-# or
-detector = SCRFD()
-# or
-detector = CenterFace()
-```
-
-### 4. Type Safety
-
-Full type hints throughout:
-
-```python
-def detect(self, image: np.ndarray) -> list[Face]:
-    ...
-```
-
----
-
-## Module Structure
-
-```
+```text
 uniface/
-├── detection/      # Face detection (BlazeFace, CenterFace, RetinaFace, SCRFD, YOLOv5Face, YOLOv8Face)
-├── recognition/    # Face recognition (AdaFace, ArcFace, EdgeFace, MobileFace, SphereFace)
-├── tracking/       # Multi-object tracking (BYTETracker)
-├── landmark/       # Dense landmarks (Landmark106 = 106 pts, PIPNet = 98 / 68 pts, FaceMesh = 468 / 478 pts)
-├── attribute/      # Age, gender, emotion, race, face states
-├── parsing/        # Face semantic segmentation
-├── matting/        # Portrait matting (MODNet)
-├── gaze/           # Gaze estimation
-├── headpose/       # Head pose estimation
-├── spoofing/       # Anti-spoofing (MiniFASNet)
-├── quality/        # Face image quality assessment (eDifFIQA)
-├── privacy/        # Face anonymization
-├── stores/         # Vector stores (FAISS)
-├── types.py        # Dataclasses (Face, GazeResult, HeadPoseResult, etc.)
-├── constants.py    # Model weights and URLs
-├── model_store.py  # Model download and caching
-├── onnx_utils.py   # ONNX Runtime utilities
-└── draw.py         # Drawing utilities
+├── detection/      # Phát hiện khuôn mặt
+├── recognition/    # Embedding / nhận dạng
+├── tracking/       # BYTETracker
+├── landmark/       # 68 / 98 / 106 / 468 / 478 điểm
+├── attribute/      # Tuổi, nhóm tuổi, cảm xúc, trạng thái
+├── parsing/        # Phân vùng ngữ nghĩa
+├── matting/        # MODNet / alpha matte
+├── gaze/           # Hướng nhìn
+├── headpose/       # Pitch / yaw / roll
+├── spoofing/       # Liveness
+├── quality/        # Face image quality
+├── privacy/        # Ẩn danh hóa
+├── stores/         # FAISS vector store
+├── types.py        # Kiểu dữ liệu dùng chung
+├── constants.py    # Trọng số / URL model
+├── model_store.py  # Download + cache + checksum
+├── onnx_utils.py   # ONNX Runtime helpers
+└── draw.py         # Visualization
 ```
 
 ---
 
-## Workflow
+## Luồng dữ liệu điển hình
 
-A typical face analysis workflow:
+Ví dụ pipeline detection → recognition → attributes:
 
 ```python
 import cv2
@@ -150,88 +157,149 @@ from uniface.attribute import AgeGender
 from uniface.detection import RetinaFace
 from uniface.recognition import ArcFace
 
-# 1. Initialize models
-detector = RetinaFace()
-recognizer = ArcFace()
-age_gender = AgeGender()
-
-# 2. Load image
 image = cv2.imread("photo.jpg")
 
-# 3. Detect faces
-faces = detector.detect(image)
-
-# 4. Analyze each face
-for face in faces:
-    # Recognition embedding
-    embedding = recognizer.get_normalized_embedding(image, face.landmarks)
-
-    # Attributes
-    attrs = age_gender.predict(image, face)
-
-    print(f"Face: {attrs.sex}, {attrs.age} years")
-```
-
----
-
-## FaceAnalyzer
-
-For convenience, `FaceAnalyzer` combines multiple modules:
-
-```python
-from uniface.analyzer import FaceAnalyzer
-from uniface.attribute import AgeGender, FairFace
-from uniface.detection import RetinaFace
-from uniface.recognition import ArcFace
-
 detector = RetinaFace()
 recognizer = ArcFace()
 age_gender = AgeGender()
-fairface = FairFace()
 
-analyzer = FaceAnalyzer(
-    detector=detector,
-    recognizer=recognizer,
-    predictors=[age_gender, fairface],
-)
+faces = detector.detect(image)
 
-faces = analyzer.analyze(image)
 for face in faces:
-    print(f"Age: {face.age}, Gender: {face.sex}")
-    print(f"Embedding: {face.embedding.shape}")
+    embedding = recognizer.get_normalized_embedding(image, face.landmarks)
+    attrs = age_gender.predict(image, face)
+
+    print("BBox:", face.bbox)
+    print("Embedding:", embedding.shape)
+    print("Tuổi ước lượng:", attrs.age)
+    print("Giới tính mô hình:", attrs.sex)
 ```
+
+### Điểm cần hiểu
+
+`Face` là đối tượng mang dữ liệu qua pipeline. Một số trường luôn có sau detection, trong khi các trường khác chỉ xuất hiện sau khi predictor tương ứng chạy. Vì vậy `None` không nhất thiết là lỗi; có thể đơn giản là module đó chưa được gọi.
 
 ---
 
-## Model Lifecycle
+## `FaceAnalyzer` làm gì?
 
-1. **First use**: Model is downloaded from GitHub Releases, with a [Hugging Face mirror](https://huggingface.co/yakhyo/uniface-weights) as an automatic fallback when GitHub is unreachable
-2. **Cached**: Stored in `~/.uniface/models/` (configurable via `set_cache_dir()` or `UNIFACE_CACHE_DIR`)
-3. **Verified**: SHA-256 checksum validation
-4. **Loaded**: ONNX Runtime session created
-5. **Inference**: Hardware-accelerated execution
+`FaceAnalyzer` là façade ở mức cao hơn để gom các bước thường dùng:
 
 ```python
-# Models auto-download on first use
-detector = RetinaFace()  # Downloads if not cached
+from uniface import FaceAnalyzer, FairFace
 
-# Optionally configure cache location
-from uniface.model_store import get_cache_dir, set_cache_dir
-set_cache_dir('/data/models')
-print(get_cache_dir())  # /data/models
-
-# Or manually pre-download
-from uniface.model_store import verify_model_weights
-from uniface.constants import RetinaFaceWeights
-
-path = verify_model_weights(RetinaFaceWeights.MNET_V2)
+analyzer = FaceAnalyzer(predictors=[FairFace()])
+faces = analyzer.analyze(image)
 ```
+
+Về bản chất, nó điều phối các bước thay vì thay thế từng model bên dưới.
+
+Nên dùng `FaceAnalyzer` khi:
+
+- cần prototype nhanh;
+- muốn pipeline mặc định hợp lý;
+- không muốn tự ghép detector + recognizer + predictor.
+
+Nên dùng module riêng khi:
+
+- cần benchmark chính xác từng model;
+- muốn kiểm soát crop/alignment;
+- tối ưu latency/memory;
+- chạy streaming hoặc multi-stage pipeline;
+- cần thay threshold theo từng giai đoạn.
 
 ---
 
-## Next Steps
+## Tăng tốc phần cứng
 
-- [Inputs & Outputs](inputs-outputs.md) - Understand data types
-- [Execution Providers](execution-providers.md) - Hardware acceleration
-- [Detection Module](../modules/detection.md) - Start with face detection
-- [Image Pipeline Recipe](../recipes/image-pipeline.md) - Complete workflow
+UniFace cố gắng chọn execution provider phù hợp với môi trường. Tuy nhiên trong production nên **kiểm tra provider thật sự được dùng**, không chỉ dựa vào việc máy có GPU.
+
+```python
+import onnxruntime as ort
+print(ort.get_available_providers())
+```
+
+Ví dụ:
+
+```text
+['CUDAExecutionProvider', 'CPUExecutionProvider']
+```
+
+Nếu chỉ thấy CPU, suy luận đang chạy CPU.
+
+---
+
+## Cache và triển khai offline
+
+Vị trí mặc định:
+
+```text
+~/.uniface/models
+```
+
+Đổi bằng Python:
+
+```python
+from uniface.model_store import set_cache_dir
+set_cache_dir("D:/AI/uniface-models")
+```
+
+Trong hệ thống offline hoặc air-gapped, nên tải sẵn toàn bộ trọng số cần dùng rồi đóng băng cache cùng phiên bản thư viện.
+
+---
+
+## Kiến trúc production gợi ý
+
+```mermaid
+graph LR
+    CAM[Camera / Upload] --> PRE[Preprocess]
+    PRE --> DET[Detector]
+    DET --> Q[Quality Gate]
+    Q -->|Đạt| AL[Alignment]
+    Q -->|Không đạt| DROP[Loại / Yêu cầu ảnh khác]
+    AL --> REC[Recognition]
+    REC --> DB[(Vector DB / FAISS)]
+    DET --> AUX[Landmark / Gaze / Pose / Liveness]
+    REC --> OUT[Business Logic]
+    AUX --> OUT
+    DB --> OUT
+```
+
+Điểm đáng chú ý là **Quality Gate** nên đặt trước recognition trong các hệ thống nghiêm túc. Ảnh quá mờ, quá nhỏ hoặc pose xấu có thể làm embedding kém ổn định.
+
+---
+
+## Ngưỡng không phải hằng số tuyệt đối
+
+Threshold nhận dạng, liveness hoặc quality phụ thuộc:
+
+- model;
+- dataset;
+- camera;
+- ánh sáng;
+- độ phân giải;
+- khoảng cách;
+- yêu cầu FAR/FRR của ứng dụng.
+
+Không nên sao chép một threshold từ demo rồi dùng nguyên xi trong production. Hãy hiệu chuẩn trên dữ liệu đại diện cho môi trường thật.
+
+---
+
+## Hạn chế cần nhớ
+
+- Dự đoán thuộc tính khuôn mặt có thể có sai lệch giữa nhóm dữ liệu.
+- Emotion recognition chỉ phản ánh pattern học từ dataset, không đọc được “trạng thái nội tâm”.
+- Liveness model không bảo đảm chống mọi kiểu presentation attack.
+- Face recognition nên được đánh giá bằng FAR/FRR hoặc ROC trên dữ liệu mục tiêu.
+- Face Mesh 3D là hình học tương đối, không tự động trở thành mô hình 3D metric chính xác tuyệt đối.
+
+---
+
+## Bước tiếp theo
+
+- [Dữ liệu vào & ra](inputs-outputs.md)
+- [Hệ tọa độ](coordinate-systems.md)
+- [Execution Providers](execution-providers.md)
+- [Model Cache & Offline](model-cache-offline.md)
+- [Threshold & Calibration](thresholds-calibration.md)
+- [Detection API](../modules/detection.md)
